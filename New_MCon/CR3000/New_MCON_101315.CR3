@@ -93,21 +93,6 @@
 
 
 
-'CONTROL PORT
-'C4		AM16/32A reset (?)
-'C5		AM16/32A clock (?)
-'C6		CS616 power control (orange)
-'G		CS616 shield (clear)
-'		AM16/32A control refernece (?)
-
-
-'POWER OUT
-'12V		HMP45C power (red)
-'		AM16/32A
-'G		HMP45C power reference (black)
-'		AM16/32A
-
-
 'POWER IN
 '12V		datalogger (red)
 'G		datalogger (black)
@@ -387,7 +372,8 @@ Dim rho_a_mean				'Mean air density.
 Units e_hmp = kPa
 Units h2o_hmp_mean = g/m^3
 Units rho_a_mean = kg/m^3
-Dim Rs, Vs_Vx
+Dim Rs_R0
+Dim cnr4_prt_R
 
 
 
@@ -931,11 +917,11 @@ BeginProg
     CSAT3 (Ux_raw,1,3,91,CSAT_OPT)
 
     'Get LI-7500 data.
-    CS7500 (co2_raw,1,7,6)
+    CS7500 (co2_raw,1,5,6)
 
     'Get LI-7200 data.
-    LI7200 (irga2_raw(1),1,1,2)
-    LI7200 (diag_irga2,1,1,6)
+    LI7200 (irga2_raw(1),1,7,2)
+    LI7200 (diag_irga2,1,7,6)
 
 
     'CNR1 Net Radiometer measurements CM3Up, CM3Dn, CG3Up, CG3Dn, CNR1TC, CNR1TK,
@@ -943,10 +929,14 @@ BeginProg
     VoltDiff(CM3Dn,1,mV20,2,True,0,250,CNR4_SWL_Mult,0)
     VoltDiff(CG3Up,1,mV20,3,True,0,250,CNR4_LWU_Mult,0)
     VoltDiff(CG3Dn,1,mV20,4,True,0,250,CNR4_LWL_Mult,0)
-    BrHalf(Vs_Vx,1,mv5000,9,Vx2,1,2500,True,0,250,1.0,0)
-    Rs=1000*(Vs_Vx/(1-Vs_Vx))
-    CNR4TC=1/(1.029e-3+2.391e-4*LN(Rs)+1.568e-7*(LN(Rs))^3)-273.15
-    CNR4TK = CNR4TC+273.18
+   
+'PRT PT-100 temperature measurement
+    Resistance (cnr4_prt_R,1,mV200,5,Ix2,1,1500,True,True,0,250,1,0)
+    Rs_R0=cnr4_prt_R/100
+    PRT(CNR4TC,1,Rs_R0,1,0)
+
+
+    CNR4TK = CNR4TC+273.15
 
     NetRs = CM3Up-CM3Dn
     NetRl = CG3Up-CG3Dn
@@ -966,7 +956,7 @@ BeginProg
     VoltDiff (panelV,1,mV5000,10,True,0,250,0.01,0)
    
 
-    Resistance (RTD_temp,1,mV200,11,Ix2,1,180,True ,True ,0,250,0.001,0)
+    Resistance (RTD_temp,1,mV200,11,Ix1,1,180,True ,True ,0,250,0.001,0)
     PRT (RTD_temp,1,RTD_temp,1.0,0)
  
 
@@ -993,7 +983,7 @@ BeginProg
    ' If WS_ms(2)<0.21 Then WS_ms(2)=0
     
 
-    BrHalf(WindDir(1),1,mV5000,23,Vx1,1,5000,True,0,250,355,0)
+    BrHalf(WindDir(1),1,mV5000,23,Vx2,1,5000,True,0,250,355,0)
     BrHalf(WindDir(2),1,mV5000,24,Vx2,1,5000,True,0,250,355,0)
     BrHalf(WindDir(3),1,mV5000,25,Vx3,1,5000,True,0,250,355,0)
     BrHalf(WindDir(4),1,mV5000,26,Vx4,1,5000,True,0,250,355,0)
@@ -1246,10 +1236,10 @@ SlowSequence
     ii = 1
     SubScan (0,mSec,5)
 
-      VoltDiff (AirTC(ii),1,mV5000,6,TRUE,0,250,.1,-40)
-  		PulsePort (8,10000)
-      VoltDiff (RH(ii),1,mV5000,6,TRUE,0,250,.1,0)
+      VoltSe (AirTC(ii),1,mV5000,11,TRUE,0,250,.1,-40)
+      VoltSe (RH(ii),1,mV5000,12,TRUE,0,250,.1,0)
       ii =ii + 1    
+      PulsePort (8,10000)
      NextSubScan
     
      PulsePort (8,10000)

@@ -387,7 +387,8 @@ Dim rho_a_mean				'Mean air density.
 Units e_hmp = kPa
 Units h2o_hmp_mean = g/m^3
 Units rho_a_mean = kg/m^3
-Dim Rs, Vs_Vx
+Dim Rs_R0
+Dim cnr4_prt_R
 
 
 
@@ -943,10 +944,14 @@ BeginProg
     VoltDiff(CM3Dn,1,mV20,2,True,0,250,CNR4_SWL_Mult,0)
     VoltDiff(CG3Up,1,mV20,3,True,0,250,CNR4_LWU_Mult,0)
     VoltDiff(CG3Dn,1,mV20,4,True,0,250,CNR4_LWL_Mult,0)
-    BrHalf(Vs_Vx,1,mv5000,9,Vx2,1,2500,True,0,250,1.0,0)
-    Rs=1000*(Vs_Vx/(1-Vs_Vx))
-    CNR4TC=1/(1.029e-3+2.391e-4*LN(Rs)+1.568e-7*(LN(Rs))^3)-273.15
-    CNR4TK = CNR4TC+273.18
+   
+'PRT PT-100 temperature measurement
+    Resistance (cnr4_prt_R,1,mV200,5,Ix2,1,1500,True,True,0,250,1,0)
+    Rs_R0=cnr4_prt_R/100
+    PRT(CNR4TC,1,Rs_R0,1,0)
+
+
+    CNR4TK = CNR4TC+273.15
 
     NetRs = CM3Up-CM3Dn
     NetRl = CG3Up-CG3Dn
@@ -961,12 +966,12 @@ BeginProg
     VoltDiff (par(2),1,mV50,8,True,0,250,PAR_mult_KZ_down,0)
 
      
-    VoltDiff (battbank,1,mV5000,9,TRUE,0,250,0.01,0)
-  
-    VoltDiff (panelV,1,mV5000,10,True,0,250,0.01,0)
+'    VoltDiff (battbank,1,mV5000,9,TRUE,0,250,0.01,0)
+'  
+'    VoltDiff (panelV,1,mV5000,10,True,0,250,0.01,0)
    
 
-    Resistance (RTD_temp,1,mV200,11,Ix2,1,180,True ,True ,0,250,0.001,0)
+    Resistance (RTD_temp,1,mV200,11,Ix1,1,180,True ,True ,0,250,0.001,0)
     PRT (RTD_temp,1,RTD_temp,1.0,0)
  
 
@@ -980,6 +985,18 @@ BeginProg
     low12V_3000 = Status.Low12VCount(1,1)
     watchdog_3000 = Status.WatchdogErrors(1,1)
 
+
+     VoltSe (AirTC(1),1,mV5000,17,TRUE,0,250,.1,-40)
+     VoltSe (RH(1),1,mV5000,18,TRUE,0,250,.1,0)
+     VoltSe (AirTC(2),1,mV5000,19,TRUE,0,250,.1,-40)
+     VoltSe (RH(2),1,mV5000,20,TRUE,0,250,.1,0)
+
+     VoltDiff (AirTC(6),1,mV5000,13,TRUE,0,250,.14,-80)
+
+     VoltDiff (RH(6),1,mV5000,14,TRUE,0,250,.1,0)
+'
+
+
     RH_Frac=RH(6)*0.01
     SatVP (e_sat,AirTC(6))
     e_KPa=e_sat*RH_Frac 
@@ -987,16 +1004,16 @@ BeginProg
 
     PulseCount(WS_ms(1),1,1,1,1,0.75,0.2)
     PulseCount(WS_ms(2),1,2,1,1,0.75,0.2)
-    PulseCount(WS_ms(3),1,3,1,1,0.75,0.2)
-    PulseCount(WS_ms(4),1,4,1,1,0.75,0.2)
+'    PulseCount(WS_ms(3),1,3,1,1,0.75,0.2)
+'    PulseCount(WS_ms(4),1,4,1,1,0.75,0.2)
    
    ' If WS_ms(2)<0.21 Then WS_ms(2)=0
     
 
-    BrHalf(WindDir(1),1,mV5000,23,Vx1,1,5000,True,0,250,355,0)
+    BrHalf(WindDir(1),1,mV5000,23,Vx2,1,5000,True,0,250,355,0)
     BrHalf(WindDir(2),1,mV5000,24,Vx2,1,5000,True,0,250,355,0)
-    BrHalf(WindDir(3),1,mV5000,25,Vx3,1,5000,True,0,250,355,0)
-    BrHalf(WindDir(4),1,mV5000,26,Vx4,1,5000,True,0,250,355,0)
+'    BrHalf(WindDir(3),1,mV5000,25,Vx3,1,5000,True,0,250,355,0)
+'    BrHalf(WindDir(4),1,mV5000,26,Vx4,1,5000,True,0,250,355,0)
     
     For i=1 To 4
     If WS_ms(i)<0.21 Then WS_ms(i)=0
@@ -1237,32 +1254,32 @@ BeginProg
  NextScan
 
 
-SlowSequence
-
-
-   Scan (1,Min,3,0)
-   PortSet (7,TRUE)  
- 
-    ii = 1
-    SubScan (0,mSec,5)
-
-      VoltDiff (AirTC(ii),1,mV5000,6,TRUE,0,250,.1,-40)
-  		PulsePort (8,10000)
-      VoltDiff (RH(ii),1,mV5000,6,TRUE,0,250,.1,0)
-      ii =ii + 1    
-     NextSubScan
-    
-     PulsePort (8,10000)
-     VoltDiff (AirTC(6),1,mV5000,6,TRUE,0,250,.14,-80)
-     PulsePort (8,10000)
-     VoltDiff (RH(6),1,mV5000,6,TRUE,0,250,.1,0)
-
-    For ii= 1 To 6
-      If RH(ii)>100 AND RH(ii)<108 Then RH(ii)=100
-    Next
-
+'SlowSequence
+'
+'
+'   Scan (1,Min,3,0)
+'   PortSet (7,TRUE)  
+' 
+'    ii = 1
+'    SubScan (0,mSec,5)
+'
+'      VoltSe (AirTC(ii),1,mV5000,11,TRUE,0,250,.1,-40)
+'      VoltSe (RH(ii),1,mV5000,12,TRUE,0,250,.1,0)
+'      ii =ii + 1    
+'      PulsePort (8,10000)
+'     NextSubScan
+'    
+'     PulsePort (8,10000)
+'     VoltDiff (AirTC(6),1,mV5000,6,TRUE,0,250,.14,-80)
+'     PulsePort (8,10000)
+'     VoltDiff (RH(6),1,mV5000,6,TRUE,0,250,.1,0)
+'
+'    For ii= 1 To 6
+'      If RH(ii)>100 AND RH(ii)<108 Then RH(ii)=100
+'    Next
+'
 
 
   
-    NextScan
+  '  NextScan
 EndProg
